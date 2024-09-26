@@ -11,6 +11,18 @@ mrna_seq <- function(blastx,all_mrna){
     mutate(Sequence = all_mrna$Sequence[match(DNA_seqid,all_mrna$DNA_seqid)])
   return(blastx)
 }
+#-------------------------------------------------------------------------------------------------
+mergeByMax <- function(a, b) {
+  max_score <- data.frame()
+  for (i in 1:nrow(a)) {
+    if (a$Alignment_Score[i] >= b$Alignment_Score[i]) {
+      max_score <- rbind(max_score, a[i, , drop = FALSE])
+    } else {
+      max_score <- rbind(max_score, b[i, , drop = FALSE])
+    }
+  }
+  return(max_score)
+}
 #-------------------------------------------------------------------------------
 test <- function(data, prf, col_match = 'DNA_seqid', get = 'PRF') {
   get_col <- sym(get)
@@ -77,14 +89,14 @@ score_frameshift_mutation <- function(blast_df, mrna_sequences,all_prf_data) {
     return(distance)
   })
   
-  blast_df$new_distance <- sapply(blast_df$distance, function(x) {
-    match_value <- prf_distance$Frequency[which(prf_distance$String == x)]
-    if (length(match_value) == 0) {
-      return(NA) # 如果没有找到匹配项，返回NA或其他默认值
-    } else {
-      return(match_value)
-    }
-  })
+  #blast_df$new_distance <- sapply(blast_df$distance, function(x) {
+    #match_value <- prf_distance$Frequency[which(prf_distance$String == x)]
+    #if (length(match_value) == 0) {
+     # return(NA) # 如果没有找到匹配项，返回NA或其他默认值
+    #} else {
+    #  return(match_value)
+    #}
+  #})
   
   # 3. 计算序列模式匹配得分，同时保留alignment信息
   align_seq <- function(seq1, standard = 'AAATAA', match_score = 1, mismatch_score = -2, gap_open = -2, gap_extend = -2) {
@@ -214,11 +226,12 @@ evaluate_scores <- function(df, total_score_col, low=0.30, high=0.80) {
   print(paste('Spearman Rank Correlation:',spearman_correlation))
 }
 #using example:
-path <- '你保存数据的文件夹'
+path <- '~/Desktop/移码数据'
 setwd(path)
-all_mrna <- read_excel("all_mrna.xlsx")
-FScanR_results <- read_excel("FScanR_results.xlsx")
-all_blastx <- read_excel("all_blastx.xlsx")
+all_mrna <- read.xlsx("all_mrna.xlsx")
+FScanR_results <- read.xlsx("FScanR_results.xlsx")
+all_blastx <- read.xlsx("all_blastx.xlsx")
+all_prf_data <- read.xlsx('all_prf_data.xlsx')
 scored_results <- score_frameshift_mutation(FScanR_results, all_mrna,all_prf_data)
 # total_score是列名，阈值为threshold_low和threshold_high(表示可能发生移码的概率，默认为0.3和0.8)
 evaluate_scores(scored_results, "total_score")
