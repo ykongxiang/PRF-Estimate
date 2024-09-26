@@ -11,7 +11,7 @@ mrna_seq <- function(blastx,all_mrna){
     mutate(Sequence = all_mrna$Sequence[match(DNA_seqid,all_mrna$DNA_seqid)])
   return(blastx)
 }
-#-------------------------------------------------------------------------------------------------
+#find a sequence best match AAATAA/AAATAG-------------------------------------------------------------------------------------------------
 mergeByMax <- function(a, b) {
   max_score <- data.frame()
   for (i in 1:nrow(a)) {
@@ -23,7 +23,7 @@ mergeByMax <- function(a, b) {
   }
   return(max_score)
 }
-#-------------------------------------------------------------------------------
+#a function used to get needed data from A -------------------------------------------------------------------------------
 test <- function(data, prf, col_match = 'DNA_seqid', get = 'PRF') {
   get_col <- sym(get)
   match_col <- sym(col_match)
@@ -32,7 +32,7 @@ test <- function(data, prf, col_match = 'DNA_seqid', get = 'PRF') {
   
   return(data)
 }
-#-------------------------------------------------------------------------------
+#dispose negative strand-------------------------------------------------------------------------------
 extract_sequences <- function(mrna_data) {
   mrna_data <- na.omit(mrna_data)  
   mrna_data$FS_start <- as.numeric(mrna_data$FS_start)
@@ -60,8 +60,8 @@ extract_sequences <- function(mrna_data) {
   })
   return(seqs)
 }
-#-------------------------------------------------------------------------------
-score_frameshift_mutation <- function(blast_df, mrna_sequences,all_prf_data) {
+#总打分代码-------------------------------------------------------------------------------
+score_frameshift_mutation <- function(blast_df, mrna_sequences) {
   blast_df <- test(blast_df,all_blastx,col_match = 'DNA_seqid' ,get = 'pident')
   blast_df <- test(blast_df,all_blastx,col_match = 'DNA_seqid' ,get = 'bitscore')
   blast_df <- test(blast_df,all_blastx,col_match = 'DNA_seqid' ,get = 'evalue')
@@ -158,7 +158,7 @@ score_frameshift_mutation <- function(blast_df, mrna_sequences,all_prf_data) {
   })
   return(df)
 }
-#-------------------------------------------------------------------------------
+#评估打分机制-------------------------------------------------------------------------------
 evaluate_scores <- function(df, total_score_col, low=0.30, high=0.80) {
   
   # 提取 PRF 和非 PRF 分数
@@ -226,13 +226,12 @@ evaluate_scores <- function(df, total_score_col, low=0.30, high=0.80) {
   print(paste('Spearman Rank Correlation:',spearman_correlation))
 }
 #using example:
-path <- '~/Desktop/移码数据'
+path <- '保存移码数据的文件夹'  #"C:/Users/31598/Desktop/移码数据"
 setwd(path)
 all_mrna <- read.xlsx("all_mrna.xlsx")
 FScanR_results <- read.xlsx("FScanR_results.xlsx")
 all_blastx <- read.xlsx("all_blastx.xlsx")
-all_prf_data <- read.xlsx('all_prf_data.xlsx')
-scored_results <- score_frameshift_mutation(FScanR_results, all_mrna,all_prf_data)
+scored_results <- score_frameshift_mutation(FScanR_results, all_mrna)
 # total_score是列名，阈值为threshold_low和threshold_high(表示可能发生移码的概率，默认为0.3和0.8)
 evaluate_scores(scored_results, "total_score")
 evaluate_scores(scored_results, "homology_score")
