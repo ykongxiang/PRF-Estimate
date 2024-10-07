@@ -61,7 +61,7 @@ extract_sequences <- function(mrna_data) {
   return(seqs)
 }
 #总打分代码-------------------------------------------------------------------------------
-score_frameshift_mutation <- function(blast_df, mrna_sequences) {
+score_frameshift_mutation <- function(blast_df, mrna_sequences, all_prf_data, all_blastx) {
   blast_df <- test(blast_df,all_blastx,col_match = 'DNA_seqid' ,get = 'pident')
   blast_df <- test(blast_df,all_blastx,col_match = 'DNA_seqid' ,get = 'bitscore')
   blast_df <- test(blast_df,all_blastx,col_match = 'DNA_seqid' ,get = 'evalue')
@@ -128,7 +128,7 @@ score_frameshift_mutation <- function(blast_df, mrna_sequences) {
     return(result)
   }
   
-  score_seq <- function(df, standard = 'AAATAA', match_score = 1, mismatch_score = -2, gap_open = -2, gap_extend = -2) {
+  score_seq <- function(df, standard = 'AAATAA', match_score = 1, mismatch_score = -2, gap_open = -2, gap_extend = -2){
     alignment_results <- sapply(df$FS_Period, align_seq, 
                                 standard = standard, 
                                 match_score = match_score, 
@@ -159,14 +159,12 @@ score_frameshift_mutation <- function(blast_df, mrna_sequences) {
   return(df)
 }
 #评估打分机制-------------------------------------------------------------------------------
-evaluate_scores <- function(df, total_score_col, low=0.30, high=0.80) {
+evaluate_scores <- function(df, total_score_col) {
   
   # 提取 PRF 和非 PRF 分数
   PRF_score <- df[[total_score_col]][df$PRF == FALSE]
   nPRF_score <- df[[total_score_col]][df$PRF == TRUE]
   
-  threshold_low <- quantile(PRF_score, low)
-  threshold_high <- quantile(PRF_score, high)
   # t-test
   t_test_result <- t.test(PRF_score, nPRF_score)
   print(t_test_result)
@@ -175,65 +173,32 @@ evaluate_scores <- function(df, total_score_col, low=0.30, high=0.80) {
   wilcox_test_result <- wilcox.test(PRF_score, nPRF_score)
   print(wilcox_test_result)
   
-  #  AUC 值
+  # AUC 值
   labels <- ifelse(df$PRF == FALSE, 1, 0)
   roc_obj <- roc(labels, df[[total_score_col]])
   plot(roc_obj)
   auc_value <- auc(roc_obj)
   print(auc_value)
-  # 分类数据
-  df$Category_Pred <- cut(
-    df[[total_score_col]],
-    breaks = c(-Inf, threshold_low, threshold_high, Inf),
-    labels = c("Low Probability A", "Possible A", "High Probability A")
-  )
   
-  # 计算混淆矩阵
-  confusion_matrix <- table(Predicted = df$Category_Pred, Actual = df$PRF)
-  print(confusion_matrix)
-  
-  # 计算准确率
-  accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
-  print(paste("Accuracy:", accuracy))
-  
-  # 计算精确度
-  precision <- confusion_matrix["High Probability A", "TRUE"] / 
-    (confusion_matrix["High Probability A", "TRUE"] + confusion_matrix["High Probability A", "FALSE"])
-  print(paste("Precision:", precision))
-  
-  # 计算假阳性率
-  false_positive_rate <- confusion_matrix["High Probability A", "FALSE"] / 
-    (confusion_matrix["High Probability A", "FALSE"] + confusion_matrix["Low Probability A", "FALSE"])
-  print(paste("False Positive Rate:", false_positive_rate))
-  
-  # 计算假阴性率
-  false_negative_rate <- confusion_matrix["Low Probability A", "TRUE"] / 
-    (confusion_matrix["Low Probability A", "TRUE"] + confusion_matrix["High Probability A", "TRUE"])
-  print(paste("False Negative Rate:", false_negative_rate))
-  
-  # 计算召回率
-  recall <- confusion_matrix["High Probability A", "TRUE"] / 
-    (confusion_matrix["High Probability A", "TRUE"] + confusion_matrix["Low Probability A", "TRUE"])
-  print(paste("Recall:", recall))
-  
-  #df$PRF <- as.factor(df$PRF)
-  #Permutation Test
-  #perm_test_result <- independence_test(PRF ~ total_score, data = df)
-  #print(paste('Permutation Test:',perm_test_result))
-  
-  #Spearman Rank Correlation:
+  # Spearman Rank Correlation
   spearman_correlation <- cor(df[[total_score_col]], as.numeric(df$PRF), method = "spearman")
-  print(paste('Spearman Rank Correlation:',spearman_correlation))
+  print(paste('Spearman Rank Correlation:', spearman_correlation))
+  
+  # Pearson Correlation
+  pearson_correlation <- cor(df[[total_score_col]], as.numeric(df$PRF), method = "pearson")
+  print(paste('Pearson Correlation:', pearson_correlation))
 }
 #using example:
-path <- '保存移码数据的文件夹'  #"C:/Users/31598/Desktop/移码数据"
+path <- "C:/Users/31598/Desktop/移码数据"
 setwd(path)
 all_mrna <- read.xlsx("all_mrna.xlsx")
 FScanR_results <- read.xlsx("FScanR_results.xlsx")
 all_blastx <- read.xlsx("all_blastx.xlsx")
-scored_results <- score_frameshift_mutation(FScanR_results, all_mrna)
+all_prf_data <- read.xlsx("all_prf_data.xlsx")
+scored_results <- score_frameshift_mutation(FScanR_results, all_mrna,all_prf_data,all_blastx)
 # total_score是列名，阈值为threshold_low和threshold_high(表示可能发生移码的概率，默认为0.3和0.8)
 evaluate_scores(scored_results, "total_score")
 evaluate_scores(scored_results, "homology_score")
 evaluate_scores(scored_results, "distance_score")
 evaluate_scores(scored_results, "Alignment_Score")
+combined_df <- read.xlsx('C:/Users/31598/Documents/combined_df.xlsx')
