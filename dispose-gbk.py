@@ -24,7 +24,7 @@ processed_list = [s.lstrip() for s in split_x]
 import os
 from Bio import SeqIO
 import itertools
-def find_matches_in_list(strings_list, target_substring = 'ribosomal frameshift'):
+def find_matches(strings_list, target_substring = 'ribosomal frameshift'):
     return [string for string in strings_list if target_substring in string]
 
 def extract_frameshift(folder_path):
@@ -47,15 +47,28 @@ def extract_frameshift(folder_path):
             flattened_notes = list(itertools.chain(*note_list))
             split_notes = [s for item in flattened_notes for s in item.split(';') if s]
             processed_notes = [s.lstrip() for s in split_notes if s]
-
+            frameshift_notes = find_matches(processed_notes)
             file_features.append({
                     'id': seq_id,
                     'Sequence' : seq,
                     'Strand' : strand,
-                    'note' : processed_notes
+                    'frameshift' : frameshift_notes
                     })
             # 将当前文件的特征列表添加到总列表中
             all_features.extend(file_features)
     return all_features
+
+def find_note(list0):
+    list0_notes = [feature for feature in list0 if feature.get('frameshift') and feature['frameshift']]
+    for feature in list0_notes:
+        print(feature['note'])
+    return list0_notes
+
 os.chdir("C:/Users/31598/Desktop/prfect")
 Atkins = extract_frameshift('data/Atkins/gbk')
+FSDB = extract_frameshift('data/FSDB/gbk')
+RECODE = extract_frameshift('data/RECODE/gbk')
+SEAPHAGES = extract_frameshift('data/SEAPHAGES/gbk')
+Xu = extract_frameshift('data/Xu/gbk')
+
+find_note(FSDB)

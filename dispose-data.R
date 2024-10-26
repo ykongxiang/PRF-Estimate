@@ -2,16 +2,17 @@ library(readxl)
 library(tidyverse)
 library(dplyr)
 library(openxlsx)
-
-oct_blastx <- read_excel("/Volumes/Samsung_T5/移码突变/移码数据/oct_blastx.xlsx")
+library(seqinr)
+setwd("C:/Users/31598/Desktop/移码数据")
+oct_blastx <- read_excel("oct_blastx.xlsx")
 colnames(oct_blastx) <- c("DNA_seqid", "Pep_seqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qframe", "sframe")
-oct_mrna <- read_excel("/Volumes/Samsung_T5/移码突变/移码数据/oct_mrna.xlsx")
-oct_prf <- read_excel("/Volumes/Samsung_T5/移码突变/移码数据/oct_prf.xlsx")
+oct_mrna <- read_excel("oct_mrna.xlsx")
+oct_prf <- read_excel("oct_prf.xlsx")
 oct_mrna$DNA_seqid <- gsub("Contig.*", "", oct_mrna$DNA_seqid)
-va_blastx <- read_excel("/Volumes/Samsung_T5/移码突变/移码数据/va_blastx.xlsx")
-colnames(va_blastx) <- c("DNA_seqid", "Pep_seqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qframe", "sframe")
-va_mrna <- read_excel("/Volumes/Samsung_T5/移码突变/移码数据/va_mrna.xlsx")
-va_prf <- read_excel("/Volumes/Samsung_T5/移码突变/移码数据/va_prf.xlsx")
+va_blastx <- read_excel("va_blastx.xlsx")
+colnames(va_blastx) <- c("DNA_seqid", "Pep_seqid", "pident", "length", "pident", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qframe", "sframe")
+va_mrna <- read_excel("va_mrna.xlsx")
+va_prf <- read_excel("va_prf.xlsx")
 va_prf_mrna <- merge(va_prf, va_mrna, by = "DNA_seqid", all = TRUE)
 oct_prf_mrna <- merge(oct_prf, oct_mrna, by ='DNA_seqid', all = TRUE)
 #删除contig标注 使DNA信息纯净
@@ -33,26 +34,40 @@ oct_prf_mrna <- oct_prf_mrna %>%
   ungroup()
 oct_prf_mrna <- oct_prf_mrna %>%
   filter(!(is.na(Strand) & oct_prf_mrna$HasNonNA))
-write.xlsx(va_prf_mrna,'/Volumes/Samsung_T5/移码突变/移码数据/va_prf_mrna.xlsx')
-write.xlsx(oct_mrna,'/Volumes/Samsung_T5/移码突变/移码数据/oct_mrna.xlsx')
-
-
-
-va_blastx <- read.table('H:/移码突变/移码数据/blastx_Euplotes_vannus.tab', header = TRUE, sep = "\t")
-oct_blastx <- read.table('H:/移码突变/移码数据/blastx_Euplotes_octocarinatus.tab', header = TRUE, sep = "\t")
+write.xlsx(va_prf_mrna,'va_prf_mrna.xlsx')
+write.xlsx(oct_mrna,'oct_mrna.xlsx')
+#-------------------------------------------------------------------------------------
+va_mRNA <- read.fasta('Euplotes_vannus_transcripts.fasta', seqtype = "DNA", as.string = TRUE)
+va_mRNA_df <- data.frame(
+  DNA_seqid = names(va_mRNA),
+  Sequence = sapply(va_mRNA, function(x) paste(x, collapse = ""))
+)
+oct_mRNA <- read.fasta('Euplotes_octocarinatus_transcripts.fasta', seqtype = "DNA", as.string = TRUE)
+oct_mRNA_df <- data.frame(
+  DNA_seqid = names(oct_mRNA),
+  Sequence = sapply(oct_mRNA, function(x) paste(x, collapse = ""))
+)
+all_mrna <- rbind(va_mRNA_df,oct_mRNA_df)
+write.xlsx(all_mrna,'all_mrna.xlsx')
+va_blastx <- read.table('blastx_Euplotes_vannus.tab', header = TRUE, sep = "\t")
+oct_blastx <- read.table('blastx_Euplotes_octocarinatus.tab', header = TRUE, sep = "\t")
 colnames(oct_blastx) <- c("DNA_seqid", "Pep_seqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qframe", "sframe")
 colnames(va_blastx) <- c("DNA_seqid", "Pep_seqid", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore", "qframe", "sframe")
 all_blastx <- rbind(oct_blastx,va_blastx)
-write.xlsx(all_blastx,'H:/移码突变/移码数据/all_blastx.xlsx')
+write.xlsx(all_blastx,'all_blastx.xlsx')
 
+va_PRF <- read.table('Euplotes_vannus_PRF.tab',header = T)
+oct_PRF <- read.table('Euplotes_octocarinatus_PRF.tab',header = T)
+PRF <- rbind(oct_PRF,va_PRF)
+write.xlsx(PRF,'PRF.xlsx')
 #——————————————————————————————————————————————————————————————————————————————————————————
 if (!require("Biostrings")) install.packages("Biostrings", dependencies = TRUE)
 library(Biostrings)
 #####调用示例：
-a <- set_data_frame(extract_sequences('/Volumes/Samsung_T5/移码突变/移码数据/all_prf_data.xlsx'))
+a <- set_data_frame(extract_sequences('all_prf_data.xlsx'))
 # 调用主函数
-a <- extract_sequences('/Volumes/Samsung_T5/移码突变/移码数据/all_prf_data.xlsx')
-mrna_file <- 'H:/移码突变/移码数据/all_prf_data.xlsx'
+a <- extract_sequences('all_prf_data.xlsx')
+mrna_file <- 'all_prf_data.xlsx'
 mrna_data1 <- read_excel(mrna_file)
 mrna_data1 <- na.omit(mrna_data1)
 
@@ -60,9 +75,9 @@ mrna_data1 <- na.omit(mrna_data1)
 #  x 是 BLAST 输出的 DataFrame, `mrna_seq` 是包含 mRNA 序列的函数, `all_prf_data` 是包含 PRF 数据的 DataFrame
 scored_results <- score_frameshift_mutation(x, all_mrna,all_prf_data)
 view(scored_results)
-all_mrna <- read_excel("H:/移码突变/移码数据/all_mrna.xlsx")
-FScanR_results <- read_excel("H:/移码突变/移码数据/FScanR_results.xlsx")
-all_blastx <- read_excel("H:/移码突变/移码数据/all_blastx.xlsx")
+all_mrna <- read_excel("all_mrna.xlsx")
+FScanR_results <- read_excel("FScanR_results.xlsx")
+all_blastx <- read_excel("all_blastx.xlsx")
 scored_results <- score_frameshift_mutation(FScanR_results, all_mrna,all_prf_data)
 new_scored <-score_frameshift_mutation(all_prf, all_mrna,all_prf_data)
 # 使用bind_rows()合并数据框
